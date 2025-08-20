@@ -1,0 +1,83 @@
+# Simulation clock
+- ros_topic_name: "/clock"
+  gz_topic_name: "/world/orl/clock"
+  ros_type_name: "rosgraph_msgs/msg/Clock"
+  gz_type_name: "gz.msgs.Clock"
+  direction: GZ_TO_ROS
+
+# Simulated pose
+- ros_topic_name: "/mantis/pose"
+  gz_topic_name: "/model/mantis/pose"
+  ros_type_name: "geometry_msgs/msg/PoseStamped"
+  gz_type_name: "gz.msgs.Pose"
+  direction: GZ_TO_ROS
+- ros_topic_name: "/reacsa/pose"
+  gz_topic_name: "/model/reacsa/pose"
+  ros_type_name: "geometry_msgs/msg/PoseStamped"
+  gz_type_name: "gz.msgs.Pose"
+  direction: GZ_TO_ROS
+- ros_topic_name: "/roma/pose"
+  gz_topic_name: "/model/roma/pose"
+  ros_type_name: "geometry_msgs/msg/PoseStamped"
+  gz_type_name: "gz.msgs.Pose"
+  direction: GZ_TO_ROS
+- ros_topic_name: "/sfp/pose"
+  gz_topic_name: "/model/sfp/pose"
+  ros_type_name: "geometry_msgs/msg/PoseStamped"
+  gz_type_name: "gz.msgs.Pose"
+  direction: GZ_TO_ROS
+
+# Reaction Wheel joint state
+- ros_topic_name: "joint_states"
+  gz_topic_name: "joint_states"
+  ros_type_name: "sensor_msgs/msg/JointState"
+  gz_type_name: "gz.msgs.Model"
+  direction: GZ_TO_ROS
+
+# Topics to apply wrenches to links
+- ros_topic_name: "wrench"
+  gz_topic_name: "/world/orl/wrench"
+  ros_type_name: "ros_gz_interfaces/msg/EntityWrench"
+  gz_type_name: "gz.msgs.EntityWrench"
+  direction: ROS_TO_GZ
+- ros_topic_name: "wrench/persistent"
+  gz_topic_name: "/world/orl/wrench/persistent"
+  ros_type_name: "ros_gz_interfaces/msg/EntityWrench"
+  gz_type_name: "gz.msgs.EntityWrench"
+  direction: ROS_TO_GZ
+- ros_topic_name: "wrench/clear"
+  gz_topic_name: "/world/orl/wrench/clear"
+  ros_type_name: "ros_gz_interfaces/msg/Entity"
+  gz_type_name: "gz.msgs.Entity"
+  direction: ROS_TO_GZ
+
+# Topics to command actuated joints
+- ros_topic_name: "reaction_wheel_cmd"
+  gz_topic_name: "reaction_wheel_cmd"
+  ros_type_name: "std_msgs/msg/Float64"
+  gz_type_name: "gz.msgs.Double"
+  direction: ROS_TO_GZ
+- ros_topic_name: "propellers_cmd"
+  gz_topic_name: "propellers_cmd"
+  ros_type_name: "actuator_msgs/msg/Actuators"
+  gz_type_name: "gz.msgs.Actuators"
+  direction: ROS_TO_GZ
+
+# Topics to add sensors
+- ros_topic_name: "scan"
+  gz_topic_name: "lidar"
+  ros_type_name: "sensor_msgs/msg/LaserScan"
+  gz_type_name: "gz.msgs.LaserScan"
+  direction: GZ_TO_ROS
+  lazy: false
+- ros_topic_name: "velodyne_points"
+  gz_topic_name: "lidar/points"
+  ros_type_name: "sensor_msgs/msg/PointCloud2"
+  gz_type_name: "gz.msgs.PointCloudPacked"
+  direction: GZ_TO_ROS
+- ros_topic_name: "camera"
+  gz_topic_name: "/camera"
+  ros_type_name: "sensor_msgs/msg/Image"
+  gz_type_name: "gz.msgs.Image"
+  direction: GZ_TO_ROS
+

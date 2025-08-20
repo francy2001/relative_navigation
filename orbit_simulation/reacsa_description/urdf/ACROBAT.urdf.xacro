@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Add acrobat dimension, weight and inertia arguments -->
+  <xacro:property name="height_acrobat_bottom_plate" value="${float($(arg height_acrobat_bottom_plate))}"/>
+  <xacro:property name="height_acrobat_center" value="${float($(arg height_acrobat_center))}"/>
+  <xacro:property name="height_acrobat_top_plate" value="${float($(arg height_acrobat_top_plate))}"/>
+  <xacro:property name="height_air_bearing_200mm" value="${float($(arg height_air_bearing_200mm))}"/>
+  <xacro:property name="height_acrobat_leg" value="${float($(arg height_acrobat_leg))}"/>
+  <xacro:property name="radius_acrobat_bottom_plate" value="${float($(arg radius_acrobat_bottom_plate))}"/>
+  <xacro:property name="radius_acrobat_center" value="${float($(arg radius_acrobat_center))}"/>
+  <xacro:property name="radius_acrobat_top_plate" value="${float($(arg radius_acrobat_top_plate))}"/>
+  <xacro:property name="radius_air_bearing_200mm" value="${float($(arg radius_air_bearing_200mm))}"/>
+  <xacro:property name="radius_acrobat_bottom_plate" value="${float($(arg radius_acrobat_bottom_plate))}"/>
+  <xacro:property name="radius_acrobat_leg" value="${float($(arg radius_acrobat_leg))}"/>
+  <xacro:property name="radius_acrobat_air_bearing_200mm" value="${float($(arg radius_acrobat_air_bearing_200mm))}"/>
+  <xacro:property name="mass_air_bearing_200mm" value="${float($(arg mass_air_bearing_200mm))}"/>
+  <xacro:property name="mass_acrobat_total" value="${float($(arg mass_acrobat_total))}"/>
+  <xacro:property name="inertia_acrobat" value="${float($(arg inertia_acrobat))}"/>
+  <xacro:property name="acr_l" value="${height_acrobat_bottom_plate+height_acrobat_center+height_acrobat_top_plate+height_acrobat_leg}"/>
+  <xacro:property name="acr_m" value="${mass_acrobat_total-3*mass_air_bearing_200mm}"/>
+  <xacro:property name="box_dim" value="0.1"/>
+
+  <!-- Air bearing link macro -->
+  <xacro:macro name="air_bearing_200mm_link" params="name">
+    <link name="${name}">
+    <xacro:inertial_cylinder mass="${mass_air_bearing_200mm}" length="${height_air_bearing_200mm}" radius="${radius_air_bearing_200mm}" factor="1">
+      <origin xyz="0 0 ${-height_air_bearing_200mm/2}" rpy="0 0 0"/>
+    </xacro:inertial_cylinder>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://reacsa_description/meshes/air_bearing_200mm.STL"/>
+      </geometry>
+    <material name="blue"/>
+    </visual>
+    <xacro:collision_cylinder length="${height_air_bearing_200mm}" radius="${radius_air_bearing_200mm}">
+      <origin xyz="0 0 ${-height_air_bearing_200mm/2}" rpy="0 0 0"/>
+    </xacro:collision_cylinder>
+    </link>
+  </xacro:macro>
+
+  <!-- LiDAR link -->
+  <xacro:macro name="lidar_link" params="name">
+    <link name="${name}">
+        <inertial>
+          <mass value="0.1"/>
+          <origin xyz="0 0 0" rpy="0 0 0"/>
+          <inertia
+            ixx="0.000166667"
+            iyy="0.000166667"
+            izz="0.000166667"
+            ixy="0.0"
+            ixz="0.0"
+            iyz="0.0" />
+        </inertial>
+        <collision>
+          <origin xyz="0 0 0" rpy="0 0 0"/>
+          <geometry>
+            <box size="0.1 0.1 0.1" />
+          </geometry>
+        </collision>
+        <visual>
+          <geometry>
+            <box size="0.1 0.1 0.1" />
+          </geometry>
+        </visual>
+    </link>
+  </xacro:macro>
+
+  <!-- ACROBAT -->
+  <!-- It is assigned a known fixed inertia simplified as a cylinder-->
+  <!-- ACROBAT origin is assumed to be on top of the stack, centered -->
+  <link name="ACROBAT">
+    <xacro:inertial_cylinder_simplified mass="${acr_m}" length="${acr_l}" inertia_z="${inertia_acrobat}">
+      <origin xyz="0 0 ${-acr_l/2}" rpy="0 0 0"/>
+    </xacro:inertial_cylinder_simplified>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://reacsa_description/meshes/ACROBAT.STL"/>
+      </geometry>
+    <material name="transparent_black"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://reacsa_description/meshes/ACROBAT.STL"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <xacro:air_bearing_200mm_link name="air_bearing_1"/>
+  <xacro:air_bearing_200mm_link name="air_bearing_2"/>
+  <xacro:air_bearing_200mm_link name="air_bearing_3"/>
+  <xacro:lidar_link name="reacsa_lidar_link" />
+
+
+  <joint name="air_bearing_joint_1" type="fixed">
+    <origin xyz="0 0.25 -0.5456" rpy="0 0 0"/>
+    <parent link="ACROBAT"/>
+    <child link="air_bearing_1"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+
+  <joint name="air_bearing_joint_2" type="fixed">
+    <origin xyz="-0.20479 -0.14339 -0.5456" rpy="0 0 0"/>
+    <parent link="ACROBAT"/>
+    <child link="air_bearing_2"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+
+  <joint name="air_bearing_joint_3" type="fixed">
+    <origin xyz="0.20479 -0.14339 -0.5456" rpy="0 0 0"/>
+    <parent link="ACROBAT"/>
+    <child link="air_bearing_3"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+
+  <joint type="fixed" name="lidar_joint">
+    <origin xyz="0 ${radius_acrobat_bottom_plate-0.02} ${-acr_l/2}" rpy='0 0 0'/>
+    <parent link='ACROBAT'/>
+    <child link='reacsa_lidar_link'/>
+    <axis xyz='0 0 0'/>
+  </joint>
+
+
+  <!-- Make the airbearing frictionless -->
+  <gazebo reference="air_bearing_1">
+        <collision name='air_bearing_1_collision'>
+            <surface>
+                <friction>
+                    <ode>
+                        <mu>0.0</mu>
+                        <mu2>0.0</mu2>
+                        <slip1>1.0</slip1>
+                        <slip2>1.0</slip2>
+                    </ode>
+                </friction>
+            </surface>
+        </collision>
+    </gazebo>
+    <gazebo reference="air_bearing_2">
+        <collision name='air_bearing_2_collision'>
+            <surface>
+                <friction>
+                    <ode>
+                        <mu>0.0</mu>
+                        <mu2>0.0</mu2>
+                        <slip1>1.0</slip1>
+                        <slip2>1.0</slip2>
+                    </ode>
+                </friction>
+            </surface>
+        </collision>
+    </gazebo>
+    <gazebo reference="air_bearing_3">
+        <collision name='air_bearing_3_collision'>
+            <surface>
+                <friction>
+                    <ode>
+                        <mu>0.0</mu>
+                        <mu2>0.0</mu2>
+                        <slip1>1.0</slip1>
+                        <slip2>1.0</slip2>
+                    </ode>
+                </friction>
+            </surface>
+        </collision>
+    </gazebo>
+
+  <!-- Linking to "lidar_link" the real sensor "camera" -->
+  <gazebo reference="reacsa_lidar_link">
+    <sensor name="lidar_sensor" type="gpu_lidar">
+        <topic>lidar</topic>
+        <update_rate>10</update_rate>
+        <frame>reacsa_lidar_link</frame>
+        <gz_frame_id>reacsa_lidar_link</gz_frame_id>
+        <lidar>
+          <scan>
+            <horizontal>
+              <samples>1800</samples>
+              <resolution>1</resolution>
+              <min_angle>-3.141593</min_angle>
+              <max_angle>3.141593</max_angle>
+            </horizontal>
+            <vertical>
+              <samples>16</samples>
+              <resolution>1</resolution>
+              <min_angle>-0.261799</min_angle>
+              <max_angle>0.261799</max_angle>
+            </vertical>
+          </scan>
+          <range>
+            <min>0.9</min>
+            <max>100</max> <!--The real value is 100, but for seek of simplicity, I will set it to 5-->
+            <resolution>0.03</resolution>
+          </range>
+        </lidar>
+        <alwaysOn>1</alwaysOn>
+        <visualize>true</visualize>
+      </sensor>
+  </gazebo>
+
+
+</robot>

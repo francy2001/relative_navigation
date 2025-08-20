@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Add satsim dimension, weight and inertia arguments -->
+  <xacro:property name="height_satsim_bottom_plate" value="${float($(arg height_satsim_bottom_plate))}"/>
+  <xacro:property name="length_thruster" value="${float($(arg length_thruster))}"/>
+  <xacro:property name="height_satsim_center" value="${float($(arg height_satsim_center))}"/>
+  <xacro:property name="height_satsim_top_plate" value="${float($(arg height_satsim_top_plate))}"/>
+  <xacro:property name="radius_satsim_bottom_plate" value="${float($(arg radius_satsim_bottom_plate))}"/>
+  <xacro:property name="radius_thruster" value="${float($(arg radius_thruster))}"/>
+  <xacro:property name="mass_thruster" value="${float($(arg mass_thruster))}"/>
+  <xacro:property name="mass_satsim_total" value="${float($(arg mass_satsim_total))}"/>
+  <xacro:property name="inertia_satsim" value="${float($(arg inertia_satsim))}"/>
+  <xacro:property name="sat_l" value="${height_satsim_bottom_plate+height_satsim_center+height_satsim_top_plate}"/>
+  <xacro:property name="sat_m" value="${mass_satsim_total-8*mass_thruster}"/>
+  <xacro:property name="box_dim" value="0.1"/>
+
+  <!-- Thruster link macro -->
+  <xacro:macro name="thruster_link" params="name">
+    <link name="${name}">
+      <xacro:inertial_cylinder mass="${mass_thruster}" length="${length_thruster}" radius="${radius_thruster}" factor="1">
+        <origin xyz="-0.00730131557509367 -0.0509495327724768 0.662152441455016" rpy="0 0 0"/>
+      </xacro:inertial_cylinder>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://reacsa_description/meshes/thruster.STL"/>
+        </geometry>
+        <material name="red"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://reacsa_description/meshes/thruster.STL"/>
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+
+  <!-- LiDAR link -->
+  <!-- <xacro:macro name="lidar_link" params="name">
+    <link name="${name}">
+        <inertial>
+          <mass value="0.1"/>
+          <origin xyz="0 0 0" rpy="0 0 0"/>
+          <inertia
+            ixx="0.000166667"
+            iyy="0.000166667"
+            izz="0.000166667"
+            ixy="0.0"
+            ixz="0.0"
+            iyz="0.0" />
+        </inertial>
+        <collision>
+          <origin xyz="0 0 0" rpy="0 0 0"/>
+          <geometry>
+            <box size="0.1 0.1 0.1" />
+          </geometry>
+        </collision>
+        <visual>
+          <geometry>
+            <box size="0.1 0.1 0.1" />
+          </geometry>
+        </visual>
+    </link>
+  </xacro:macro> -->
+
+  <!-- SATSIM -->
+  <!-- It is assigned a known fixed inertia simplified as a cylinder-->
+  <!-- SATSIM origin is assumed to be on top of the stack, centered -->
+  <link name="SATSIM">
+    <xacro:inertial_cylinder_simplified mass="${sat_m}" length="${sat_l}" inertia_z="${inertia_satsim}">
+      <origin xyz="0 0 ${-sat_l/2}" rpy="0 0 0"/>
+    </xacro:inertial_cylinder_simplified>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://reacsa_description/meshes/SATSIM.STL"/>
+      </geometry>
+      <material name="transparent_black"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://reacsa_description/meshes/SATSIM.STL"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- SATSIM thruster 0 positioned to +x pointing -y-->
+  <xacro:thruster_link name="thruster0"/>
+  <!-- SATSIM thruster 1 positioned to +x pointing +y-->
+  <xacro:thruster_link name="thruster1"/>
+  <!-- SATSIM thruster 2 positioned to +y pointing +x-->
+  <xacro:thruster_link name="thruster2"/>
+  <!-- SATSIM thruster 3 positioned to +y pointing -x-->
+  <xacro:thruster_link name="thruster3"/>
+  <!-- SATSIM thruster 4 positioned to -x pointing +y-->
+  <xacro:thruster_link name="thruster4"/>
+  <!-- SATSIM thruster 5 positioned to -x pointing -y-->
+  <xacro:thruster_link name="thruster5"/>
+  <!-- SATSIM thruster 6 positioned to -y pointing -x-->
+  <xacro:thruster_link name="thruster6"/>
+  <!-- SATSIM thruster 7 positioned to -y pointing +x-->
+  <xacro:thruster_link name="thruster7"/>
+  <!-- SATSIM LiDAR -->
+  <!--<xacro:lidar_link name="reacsa_lidar_link" />-->
+
+  <!-- Origin has been taken from the CAD, can be replaced by constants once they are accurate and verified -->
+  <!-- <joint type="fixed" name="thruster0_joint">
+  <origin xyz='${radius_satsim_bottom_plate-radius_thruster} ${-(length_thruster/2+0.05)} ${-sat_l/2+height_satsim_bottom_plate+radius_thruster}' rpy='${pi/2} 0 0'/>
+  <parent link="satsim"/>
+  <child link="thruster0"/>
+  </joint> -->
+  <joint name="thruster0_joint" type="fixed">
+    <origin xyz="0.318723989833623 -0.062959813188638 -0.166489967215588" rpy="${pi} 0 0"/>
+    <parent link="SATSIM"/>
+    <child link="thruster0"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <joint name="thruster1_joint" type="fixed">
+    <origin xyz="0.318723986761301 0.0629077975642722 -0.166509634029531" rpy="${-pi} 0 ${-pi}"/>
+    <parent link="SATSIM"/>
+    <child link="thruster1"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <joint name="thruster2_joint"
+    type="fixed">
+    <origin xyz="0.0629077897829216 0.318723988296512 -0.166509634029534" rpy="${-pi} 0 ${pi/2}"/>
+    <parent link="SATSIM"/>
+    <child link="thruster2"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <joint name="thruster3_joint"
+    type="fixed">
+    <origin xyz="-0.0629598209699886 0.318723988297131 -0.166489967215591" rpy="${pi} 0 ${-pi/2}"/>
+    <parent link="SATSIM"/>
+    <child link="thruster3"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <joint name="thruster4_joint" type="fixed">
+    <origin xyz="-0.318776005456717 0.0629077975642633 -0.166410024656949" rpy="${-pi} 0 ${-pi}"/>
+    <parent link="SATSIM"/>
+    <child link="thruster4"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <joint name="thruster5_joint" type="fixed">
+    <origin xyz="-0.318776002384395 -0.0629598131886469 -0.166390357843005" rpy="${pi} 0 0"/>
+    <parent link="SATSIM"/>
+    <child link="thruster5"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <joint name="thruster6_joint" type="fixed">
+    <origin xyz="-0.0629598054060154 -0.318776003920887 -0.166390357843002" rpy="${pi} 0 ${-pi/2}"/>
+    <parent link="SATSIM"/>
+    <child link="thruster6"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <joint name="thruster7_joint" type="fixed">
+    <origin xyz="0.0629078053468948 -0.318776003921505 -0.166410024656944" rpy="${-pi} 0 ${pi/2}"/>
+    <parent link="SATSIM"/>
+    <child link="thruster7"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <!-- Join SATSIM to lidar -->
+  <!--<joint type="fixed" name="lidar_joint">
+    <origin xyz='${radius_satsim_bottom_plate - box_dim} 0 ${height_satsim_top_plate + box_dim/2}' rpy='0 0 0'/>
+    <parent link='SATSIM'/>
+    <child link='reacsa_lidar_link'/>
+    <axis xyz='0 0 0'/>
+  </joint>-->
+
+  <!-- Linking to "lidar_link" the real sensor "camera" -->
+  <!--<gazebo reference="reacsa_lidar_link">
+    <sensor name="lidar_sensor" type="gpu_lidar">
+        <topic>lidar</topic>
+        <update_rate>10</update_rate>
+        <frame>reacsa_lidar_link</frame>
+        <gz_frame_id>reacsa_lidar_link</gz_frame_id>
+        <lidar>
+          <scan>
+            <horizontal>
+              <samples>1800</samples>
+              <resolution>1</resolution>
+              <min_angle>-3.141593</min_angle>
+              <max_angle>3.141593</max_angle>
+            </horizontal>
+            <vertical>
+              <samples>16</samples>
+              <resolution>1</resolution>
+              <min_angle>-0.261799</min_angle>
+              <max_angle>0.261799</max_angle>
+            </vertical>
+          </scan>
+          <range>
+            <min>0.9</min>
+            <max>10.0</max> --><!--The real value is 100, but for seek of simplicity, I will set it to 10--><!--
+            <resolution>0.03</resolution>
+          </range>
+        </lidar>
+        <alwaysOn>1</alwaysOn>
+        <visualize>true</visualize>
+      </sensor>
+  </gazebo>-->
+
+
+</robot>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="reacsa">
+  <!-- Add namespace argument -->
+  <xacro:arg name="namespace" default=""/>
+
+  <!-- Include helper xacro file -->
+  <xacro:include filename="$(find orl_common)/urdf/include.xacro"/>
+
+  <!-- Include the subsystems -->
+  <xacro:include filename="ACROBAT.urdf.xacro"/>
+  <xacro:include filename="SATSIM.urdf.xacro"/>
+  <xacro:include filename="RECAP.urdf.xacro"/>
+
+  <!-- Base link without inertia necessary for physics engine -->
+  <link name="base_link"/>
+
+  <!-- Joining all links together with top to bottom approach -->
+  <!-- The base link (without inertia) is attached at the top of RECAP to coincide with the physical system (Vicon markers) -->
+  <!-- When loading the urdf, gazebo will convert the urdf to an sdf and lump the base_link and RECAP together, renaming it base_link -->
+  <!-- Join base link to RECAP -->
+  <joint type="fixed" name="base_link_to_recap">
+    <origin xyz='0 0 0' rpy='0 0 0'/>
+    <parent link="base_link"/>
+    <child link="RECAP"/>
+  </joint>
+
+  <!-- Join RECAP to SATSIM -->
+  <joint type="fixed" name="recap_to_satsim">
+    <origin xyz='0 0 ${-rec_l}' rpy='0 0 0'/>
+    <parent link="RECAP"/>
+    <child link="SATSIM"/>
+  </joint>
+
+  <!-- Join SATSIM to ACROBAT -->
+  <joint type="fixed" name="satsim_to_acrobat">
+    <origin xyz='0 0 ${-sat_l}' rpy='0 0 0'/>
+    <parent link="SATSIM"/>
+    <child link="ACROBAT"/>
+  </joint>
+
+  <!-- Include all the contents of gazebo.xacro -->
+  <xacro:include filename="gazebo.xacro"/>
+
+</robot>

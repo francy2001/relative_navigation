@@ -1,0 +1,38 @@
+stages:
+  - build
+  - test
+  - release
+
+variables:
+  DOCKER_IMAGE: docker:27-dind
+
+# This section is executed before every job's script. To override, define a before_script within the job
+default:
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+    - docker version
+    - docker compose version
+    - docker context create builder
+    - docker buildx create --use builder
+
+build:
+  stage: build
+  image: $DOCKER_IMAGE
+  retry:
+    max: 2
+    when: job_execution_timeout
+  script:
+    - apk -q update && apk -q add git
+    - docker build .
+
+pre-commit:
+  stage: test
+  image: python:latest
+  before_script: []
+  needs: []
+  except:
+    - master
+  script:
+    - pip install pre-commit
+    - pre-commit install
+    - pre-commit run --all-files

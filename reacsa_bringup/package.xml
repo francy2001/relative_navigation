@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>reacsa_bringup</name>
+  <version>0.0.1</version>
+  <description> The package containing general launch files for REACSA</description>
+  <maintainer email="marti.vilella@ext.esa.int">Marti Vilella</maintainer>
+  <license>Open Source. Do whatever you want.</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+  <depend> rclcpp </depend>
+  <depend> orl_common </depend>
+  <depend> reacsa_control </depend>
+  <depend> reacsa_description </depend>
+  <depend> reacsa_input </depend>
+  <depend> reacsa_observer </depend>
+  <depend> reacsa_report </depend>
+  <depend> orbit_simulation </depend>
+  <depend> reacsa_visualization </depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+
+</package>

@@ -1,0 +1,16 @@
+reacsa:
+  visualization_publisher:
+  ros__parameters:
+    max_pressure_low: 10 # Maximum pressure for the lowline sensor [bar]
+    max_pressure_mid: 25 # Maximum pressure for the midline sensor [bar]
+    max_pressure_high: 300 # Maximum pressure for the highline sensor [bar]
+    critical_pressure_low: # Critical pressure limits on the highline
+      - 6.7 # Critical low pressure [bar]
+      - 8 # Critical high pressure [bar]
+    critical_pressure_mid: # Critical pressure limits on the midline
+      - 7 # Critical low pressure [bar]
+      - 10 # Critical high pressure [bar]
+    critical_pressure_high: # Critical pressure limits on the highline
+      - 30 # Critical low pressure [bar]
+      - 290 # Critical high pressure [bar]
+    no_pressure_data_max_time: 5.0 # The time after which the pressure bar starts to flash when no pressure data is received [s]

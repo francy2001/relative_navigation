@@ -1,0 +1,20 @@
+### Excel data ###
+Max x = 4.500881000000001 m, min x = -0.00830599999999959 m, difference = 4.509187 m
+Max y = 8.399977000000002 m, min y = -0.00344599999999991 m, difference = 8.403423 m
+Max z = 0.0009640611111110499 m, min z = -0.00048193888888886297 m, difference = 0.0014459999999999128 m
+### Interpolated data ###
+Max z = 0.000942 m, min z = -0.000510 m, difference = 0.001452 m
+### Image data ###
+Image size = (1025, 559) px, (4.8,8.8) m
+Resolution X: 8.586762 mm/px
+Resolution Y: 8.585366 mm/px
+Center image coordinate: (2.4,4.4) m
+Floor corner coodinates: (0.145407,0.198288) m, (4.654593,8.601712) m, x length = 4.509187 m, y length = 8.403423 m
+Center floor coordinate: (2.400000,4.400000)
+### Floor data (floor coordinate system) ###
+Image corner coodinates: (-0.145407,-0.198288) m, (4.654593,8.601712) m
+Center floor coordinate: (2.254593,4.201712)
+### Floor induced acceleration (RBF interpolation) ###
+Acceleration along x: mean = 0.002618, max = 0.014706
+Acceleration along y: mean = 0.002573, max = 0.019863
+Acceleration (mean of x/y): mean = 0.002595, max = 0.012882

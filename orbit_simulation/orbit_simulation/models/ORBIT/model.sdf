@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<sdf version="1.9">
+  <model name="ORBIT">
+    <static>true</static>
+    <link name="flat_floor">
+      <collision name="collision">
+        <geometry>
+          <heightmap>
+            <uri>materials/textures/heightmap.png</uri>
+            <!-- x y zdiffmax -->
+            <size>8.8 8.8 0.0014459999999999128</size>
+            <!-- Since heightmaps require to be square, we have to center ORBIT between the walls -->
+            <pos>2 0 0</pos>
+          </heightmap>
+        </geometry>
+        <!-- Make floor frictionless -->
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.0</mu>
+              <mu2>0.0</mu2>
+              <slip1>1.0</slip1>
+              <slip2>1.0</slip2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <heightmap>
+            <use_terrain_paging>false</use_terrain_paging>
+            <texture>
+              <diffuse>materials/textures/heightmap_masked.png</diffuse>
+              <normal>materials/textures/flat_normal.png</normal>
+              <size>8.8</size>
+            </texture>
+            <uri>materials/textures/heightmap.png</uri>
+            <size>8.8 8.8 0.0014459999999999128</size>
+            <pos>2 0 0</pos>
+          </heightmap>
+        </geometry>
+      </visual>
+    </link>
+  </model>
+</sdf>

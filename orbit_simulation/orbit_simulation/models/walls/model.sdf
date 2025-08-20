@@ -1,0 +1,148 @@
+<?xml version='1.0' encoding="utf-8"?>
+<sdf version='1.9'>
+  <model name='walls'>
+    <static>true</static>
+
+    <!-- Wall 1, back wall of the ORL -->
+    <link name='wall1'>
+      <!--Position and orientation of the wall-->
+      <pose>0 4.4 0 0 0 0</pose>
+
+      <!-- Specify the shape for collisions -->
+      <collision name='collision'>
+        <pose>0 0 1.25 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>4.8 0.05 2.5</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <!-- Specify the shape and material for visualization -->
+      <visual name='visual'>
+        <pose>0 0 1.25 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>4.8 0.05 2.5</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.25 0.25 0.25 0.75</ambient>
+          <diffuse>0.25 0.25 0.25 0.75</diffuse>
+          <specular>0 0 0 0</specular>
+          <emissive>0 0 0 1</emissive>
+        </material>
+        <meta>
+          <layer>0</layer>
+        </meta>
+      </visual>
+    </link>
+
+    <!-- Wall 2, GRALS rail side of ORL -->
+    <link name='wall2'>
+      <!--Position and orientation of the wall-->
+      <pose>2.4 0 0 0 0 1.5708</pose>
+
+      <!-- Specify the shape for collisions -->
+      <collision name='collision'>
+        <pose>0 0 1.25 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>8.8 0.05 2.5</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <!-- Specify the shape and material for visualization -->
+      <visual name='visual'>
+        <pose>0 0 1.25 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>8.8 0.05 2.5</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.25 0.25 0.25 0.75</ambient>
+          <diffuse>0.25 0.25 0.25 0.75</diffuse>
+          <specular>0 0 0 0</specular>
+          <emissive>0 0 0 1</emissive>
+        </material>
+        <meta>
+          <layer>0</layer>
+        </meta>
+      </visual>
+    </link>
+
+        <!-- Wall 3, entry area to the flat floor -->
+    <link name='wall3'>
+      <!-- Position and orientation of the wall -->
+      <pose>0 -4.4 0 0 0 0</pose>
+
+      <!-- Specify the shape for collisions -->
+      <collision name='collision'>
+        <pose>0 0 1.25 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>4.8 0.05 2.5</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <!-- Specify the shape and material for visualization -->
+      <visual name='visual'>
+        <pose>0 0 1.25 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>4.8 0.05 2.5</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.25 0.25 0.25 0.75</ambient>
+          <diffuse>0.25 0.25 0.25 0.75</diffuse>
+          <specular>0 0 0 0</specular>
+          <emissive>0 0 0 1</emissive>
+        </material>
+        <meta>
+          <layer>0</layer>
+        </meta>
+      </visual>
+    </link>
+
+
+    <!-- Wall 4, metal mount side wall of ORL -->
+    <link name='wall4'>
+      <!--Position and orientation of the wall-->
+      <pose>-2.4 0 0 0 0 1.5708</pose>
+
+      <!-- Specify the shape for collisions -->
+      <collision name='collision'>
+        <pose>0 0 1.25 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>8.8 0.05 2.5</size>
+          </box>
+        </geometry>
+      </collision>
+
+      <!-- Specify the shape and material for visualization -->
+      <visual name='visual'>
+        <pose>0 0 1.25 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>8.8 0.05 2.5</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.25 0.25 0.25 0.75</ambient>
+          <diffuse>0.25 0.25 0.25 0.75</diffuse>
+          <specular>0 0 0 0</specular>
+          <emissive>0 0 0 1</emissive>
+        </material>
+        <meta>
+          <layer>0</layer>
+        </meta>
+      </visual>
+    </link>
+
+  </model>
+</sdf>

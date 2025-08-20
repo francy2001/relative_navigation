@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Add RECAP dimension, weight and inertia arguments -->
+  <xacro:property name="height_recap_bottom_plate" value="${float($(arg height_recap_bottom_plate))}"/>
+  <xacro:property name="height_reaction_wheel" value="${float($(arg height_reaction_wheel))}"/>
+  <xacro:property name="height_recap_center" value="${float($(arg height_recap_center))}"/>
+  <xacro:property name="height_recap_top_plate" value="${float($(arg height_recap_top_plate))}"/>
+  <xacro:property name="height_recap_column" value="${float($(arg height_recap_column))}"/>
+  <xacro:property name="radius_reaction_wheel" value="${float($(arg radius_reaction_wheel))}"/>
+  <xacro:property name="radius_recap_center" value="${float($(arg radius_recap_center))}"/>
+  <xacro:property name="mass_recap_total" value="${float($(arg mass_recap_total))}"/>
+  <xacro:property name="mass_reaction_wheel" value="${float($(arg mass_reaction_wheel))}"/>
+  <xacro:property name="inertia_reaction_wheel" value="${float($(arg inertia_reaction_wheel))}"/>
+  <xacro:property name="inertia_recap" value="${float($(arg inertia_recap))}"/>
+  <xacro:property name="rec_l" value="${height_recap_bottom_plate+height_recap_column+height_recap_top_plate}"/>
+  <xacro:property name="rec_m" value="${mass_recap_total-mass_reaction_wheel}"/>
+  <xacro:property name="mass_camera" value="${float($(arg mass_camera))}"/>
+
+  <!-- Camera link -->
+  <xacro:macro name="camera_link" params="name">
+    <link name="${name}">
+      <inertial>
+        <mass value="0.1"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia 
+          ixx="0.000166667" 
+          iyy="0.000166667" 
+          izz="0.000166667"
+          ixy="0.0"
+          ixz="0.0"
+          iyz="0.0"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.1 0.1 0.1" />
+        </geometry>
+        <material name="red"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.1 0.1 0.1" />
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+
+  <!-- RECAP -->
+  <!-- It is assigned a known fixed inertia simplified as a cylinder -->
+  <!-- RECAP origin is assumed to be on top of the stack, centered -->
+  <link name="RECAP">
+    <xacro:inertial_cylinder_simplified mass="${rec_m}" length="${rec_l}" inertia_z="${inertia_recap}">
+      <origin xyz="0 0 ${-rec_l/2}" rpy="0 0 0"/>
+    </xacro:inertial_cylinder_simplified>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://reacsa_description/meshes/RECAP.STL"/>
+      </geometry>
+      <material name="transparent_black"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://reacsa_description/meshes/RECAP.STL"/>
+      </geometry>
+    </collision>
+    <!-- Recap reaction wheel central holder (visual+collision) -->
+    <xacro:collision_visual_cylinder length="${height_recap_center}" radius="${radius_recap_center}" color="red">
+      <origin xyz="0 0 ${-rec_l+height_recap_bottom_plate+height_recap_center/2}" rpy="0 0 0"/>
+    </xacro:collision_visual_cylinder>
+  </link>
+
+  <!-- Recap reaction wheel -->
+  <xacro:link_cylinder_simplified name="reaction_wheel" mass="${mass_reaction_wheel}" length="${height_reaction_wheel}" radius="${radius_reaction_wheel}" inertia_z="${inertia_reaction_wheel}" color="red">
+  </xacro:link_cylinder_simplified>
+  <!-- RECAP camera -->
+  <xacro:camera_link name="camera_link"/>  
+
+  <!-- Join RECAP to reaction wheel -->
+  <joint type="continuous" name="reaction_wheel_joint">
+    <origin xyz='0 0 ${-rec_l+height_recap_bottom_plate+height_recap_center+height_reaction_wheel/2}' rpy='0 0 0'/>
+    <parent link='RECAP'/>
+    <child link='reaction_wheel'/>
+    <axis xyz='0 0 1'/>
+    <dynamics damping='0' friction='0'/>
+  </joint>
+
+  <!-- Join RECAP to camera -->
+  <joint type="fixed" name="camera_joint">
+    <origin xyz='0 0 ${height_recap_bottom_plate+box_dim/2}' rpy='0 0 0'/>
+    <parent link='RECAP'/>
+    <child link='camera_link'/>
+    <axis xyz='0 0 0'/>
+  </joint>
+
+  <!-- Linking to "camera_link" the real sensor "camera" -->
+  <gazebo reference="camera_link">
+      <sensor name="camera_link" type="camera">
+      <camera>
+          <horizontal_fov>1.047</horizontal_fov>
+          <image>
+              <width>320</width>
+              <height>240</height>
+          </image>
+          <clip>
+              <near>0.1</near>
+              <far>100</far>
+          </clip>
+      </camera>
+      <always_on>1</always_on>
+      <update_rate>30</update_rate>
+      <visualize>true</visualize>
+      <topic>camera</topic>
+    </sensor>
+  </gazebo>
+
+</robot>

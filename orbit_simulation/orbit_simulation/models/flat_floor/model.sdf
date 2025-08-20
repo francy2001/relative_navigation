@@ -1,0 +1,38 @@
+<?xml version='1.0'?>
+<sdf version='1.7'>
+  <model name='flat_floor'>
+    <static>true</static>
+    <!-- Add uneven flat foor mesh created with Blender and heightmap images 513x513 px -->
+    <link name="heightmap">
+      <collision name="collision">
+        <geometry>
+          <mesh>
+            <uri>model://ORBIT/materials/textures/heightmap_513.dae</uri>
+          </mesh>
+        </geometry>
+
+        <!-- Make floor frictionless -->
+        <surface>
+          <friction>
+            <ode>
+              <mu>0.0</mu>
+              <mu2>0.0</mu2>
+              <slip1>1.0</slip1>
+              <slip2>1.0</slip2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+
+      <visual name="visual">
+        <geometry>
+          <mesh>
+            <uri>model://ORBIT/materials/textures/heightmap_513.dae</uri>
+          </mesh>
+        </geometry>
+      </visual>
+
+    </link>
+
+  </model>
+</sdf>
