@@ -12,13 +12,14 @@
 
 #include "lidar_pose_estimation.h"
 
+
 template<typename PointT> typename pcl::PointCloud<PointT>::Ptr  LidarListener::filterPointCloud(typename pcl::PointCloud<PointT>::Ptr cloud, float filterRes)
 {
     // Time segmentation process
     auto startime = std::chrono::steady_clock::now();
 
     // Implement voxel grid filtering here
-    RCLCPP_INFO(this->get_logger(), "[Medium method]Filtering PointCloud2 data...");
+    RCLCPP_DEBUG(this->get_logger(), "[Medium method]Filtering PointCloud2 data...");
 
     // Real application of Voxel Grid Filtering: dividing the space into cubes of side filterRes
     // and replacing all points in each cube with their centroid
@@ -36,18 +37,18 @@ template<typename PointT> typename pcl::PointCloud<PointT>::Ptr  LidarListener::
     {
         // Computing the orizzontal angle of the point
         // and checking if it is within the range [-135, 135] degrees
+        RCLCPP_DEBUG(this->get_logger(), "Point: x=%.2f, y=%.2f, z=%.2f", point.x, point.y, point.z);
         float angle = std::atan2(point.y, point.x); // Angle in radians: [-pi, pi]
-        // Normalizing the angle to be in the range [-3/4 pi, 3/4 pi]
-        while(angle > M_PI) angle -= 2 * M_PI;
-        while(angle < -M_PI) angle += 2 * M_PI;
+        RCLCPP_DEBUG(this->get_logger(), "Point angle: %.2f radians", angle);
 
-        if(std::abs(angle) <= 3.0f * M_PI / 4.0f) // [-3/4 pi, 3/4 pi] --> [-135, 135] degrees
+        if(std::abs(angle) <= 3.0f * M_PI / 4.0f) // [-3/8 pi, 3/8 pi] --> [-67.5, 67.5] degrees
         {
             // If the point is within the range, add it to the cloud_region
             cloud_region->points.push_back(point);
         }else{
             RCLCPP_DEBUG(this->get_logger(), "Point out of range: x=%.2f, y=%.2f, angle=%.2f", point.x, point.y, angle);
         }
+        
     }
     cloud_region->width = static_cast<uint32_t>(cloud_region->points.size());
     cloud_region->height = 1; // Unorganized point cloud
@@ -55,9 +56,75 @@ template<typename PointT> typename pcl::PointCloud<PointT>::Ptr  LidarListener::
 
     auto endTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startime);
-    RCLCPP_INFO(this->get_logger(), "filtering took %ld milliseconds", elapsedTime.count());
+    RCLCPP_DEBUG(this->get_logger(), "filtering took %ld milliseconds", elapsedTime.count());
 
     return cloud_region;
+}
+
+template<typename PointT> std::vector<PolarPoint> LidarListener::toPolar(typename pcl::PointCloud<PointT>::Ptr cloud)
+{
+    std::vector<PolarPoint> polarCloud;
+    polarCloud.reserve(cloud->size());
+
+    for (const auto& point : cloud->points) {
+        PolarPoint p;
+        p.r = std::sqrt(point.x * point.x + point.y * point.y + point.z * point.z);
+        p.theta = std::atan2(point.y, point.x);
+        p.phi = std::atan2(point.z, std::sqrt(point.x * point.x + point.y * point.y));
+        p.idx = &point - &cloud->points[0];  // Get the index of the point
+        polarCloud.push_back(p);
+    }
+    return polarCloud;
+}
+
+
+template<typename PointT> std::unordered_set<int> LidarListener::Ransac2D(typename pcl::PointCloud<PointT>::Ptr cloud, int maxIterations, float distanceTol)
+{
+    std::unordered_set<int> inliersResult;
+    std::unordered_set<int> inliers;
+    srand(time(NULL));
+
+    // For max iterations 
+    int i = 0;
+    double line = 0.0;
+    double dist = 0.0;
+    double den = 0.0;
+    int ind1, ind2 = 0;
+
+    while (i < maxIterations) {
+
+        // clear this every iteration
+        inliers.clear();
+
+        // ensure same indices are not picked
+        while (true) {
+            ind1 = rand() % cloud->points.size();
+            ind2 = rand() % cloud->points.size();
+            if (ind1 != ind2)
+                break;
+        }
+
+        // points to construct the line
+        pcl::PointXYZ p1 = cloud->points[ind1];
+        pcl::PointXYZ p2 = cloud->points[ind2];
+
+        for (int ind = 0; ind < int(cloud->points.size()); ind++) {
+            double x = cloud->points[ind].x;
+            double y = cloud->points[ind].y;
+            line = (p1.y - p2.y) * x + (p2.x - p1.x) * y + (p1.x * p2.y - p2.x * p1.y);
+            den = sqrt(pow((p1.y - p2.y), 2) + pow((p2.x - p1.x), 2));
+            dist = fabs(line / den);
+            RCLCPP_DEBUG(this->get_logger(), "distance %f", dist);
+            if (dist < distanceTol) {
+                inliers.insert(ind);
+            }
+        }
+        // return the set with maximum number of inliers
+        if (inliers.size() > inliersResult.size())
+            inliersResult = inliers;
+        i++;
+    }
+    return inliersResult;
 }
 
 template<typename PointT> std::unordered_set<int> LidarListener::Ransac3d(typename pcl::PointCloud<PointT>::Ptr cloud, int maxIterations, float distanceTol)
@@ -124,22 +191,29 @@ template<typename PointT> std::pair<typename pcl::PointCloud<PointT>::Ptr, typen
 {
     auto startTime = std::chrono::steady_clock::now();
 
-    // Using custom RANSAC implementation to segment the plane
-    std::unordered_set<int> inliersResult = Ransac3d<PointT>(cloud, maxIterations, distanceThreshold);
+    // Using polar coordinates
+    std::vector<PolarPoint> polarCoords = toPolar<pcl::PointXYZ>(cloud);
+    typename pcl::PointCloud<PointT>::Ptr polarCloud(new pcl::PointCloud<PointT>());
+    for (const auto& p : polarCoords) {
+        PointT point;
+        point.x = p.r;
+        point.y = p.theta;
+        point.z = p.phi;
+        polarCloud->points.push_back(point);
+    }
 
+    // Using custom RANSAC implementation to segment the plane
+    std::unordered_set<int> inliersResult = Ransac3d<PointT>(polarCloud, maxIterations, distanceThreshold);
+    
     // Create two point clouds: one for the plane and one for the obstacles
     // The plane cloud will contain the points that are inliers to the plane
     // The obstacles cloud will contain the points that are not inliers to the plane
     typename pcl::PointCloud<PointT>::Ptr planeCloud(new pcl::PointCloud<PointT>());
     typename pcl::PointCloud<PointT>::Ptr obsCloud(new pcl::PointCloud<PointT>());
 
-    std::ofstream outfile("planeCloud_log.txt");
-    std::ofstream outfile2("obstacleCloud_log.txt");
+    std::ofstream outfile("point_cloud.txt");
     if (!outfile.is_open()) {
-        RCLCPP_ERROR(this->get_logger(), "Failed to open planeCloud_log.txt for writing");
-    }
-    if (!outfile2.is_open()) {
-        RCLCPP_ERROR(this->get_logger(), "Failed to open obstacleCloud_log.txt for writing");
+        RCLCPP_ERROR(this->get_logger(), "Failed to open point_cloud.txt for writing");
     }
 
     for (int i = 0; i < int(cloud->points.size()); i++)
@@ -147,20 +221,102 @@ template<typename PointT> std::pair<typename pcl::PointCloud<PointT>::Ptr, typen
         PointT point = cloud->points[i];
         if (inliersResult.count(i)){
             planeCloud->points.push_back(point);
-            //RCLCPP_INFO(this->get_logger(), "Point[%d] is an inlier: x=%.2f, y=%.2f, z=%.2f", i, point.x, point.y, point.z);
-            outfile << "Point[" << i << "] is an inlier: x=" << point.x << ", y=" << point.y << ", z=" << point.z << "\n";
+            RCLCPP_DEBUG(this->get_logger(), "Point[%d] is an inlier: x=%.2f, y=%.2f, z=%.2f", i, point.x, point.y, point.z);
         }else{
             obsCloud->points.push_back(point);
-            //RCLCPP_INFO(this->get_logger(), "Point[%d] is an obstacle: x=%.2f, y=%.2f, z=%.2f", i, point.x, point.y, point.z);
-            outfile2 << "Point[" << i << "] is an obstacle: x=" << point.x << ", y=" << point.y << ", z=" << point.z << "\n";
+            RCLCPP_DEBUG(this->get_logger(), "Point[%d] is an obstacle: x=%.2f, y=%.2f, z=%.2f", i, point.x, point.y, point.z);
         }
+        outfile << "x=" << point.x << ", y=" << point.y << ", z=" << point.z << "\n";
     }
+
+    outfile << "End of point cloud data\n";
+    outfile.close();
     
+    RCLCPP_INFO(this->get_logger(), "Segmented Plane Cloud size: %zu points", planeCloud->points.size());
+    RCLCPP_INFO(this->get_logger(), "Segmented Obstacles Cloud size: %zu points", obsCloud->points.size());
+
     auto endTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-    RCLCPP_INFO(this->get_logger(), "Custom RANSAC plane segmentation took %ld milliseconds", elapsedTime.count());
+    RCLCPP_DEBUG(this->get_logger(), "Custom RANSAC plane segmentation took %ld milliseconds", elapsedTime.count());
     
     return std::make_pair(obsCloud, planeCloud);
+}
+
+void LidarListener::proximity(const std::vector<std::vector<float>>& points, int idx, std::vector<int>& cluster, std::vector<int>& processed, KdTree* tree, float distanceTol)
+{
+    processed.push_back(idx);
+    cluster.push_back(idx);
+
+    std::vector<int> nearby = tree->search(points[idx], distanceTol);
+    for (int id : nearby)
+        if (std::find(processed.begin(), processed.end(), id) == processed.end())
+            proximity(points, id, cluster, processed, tree, distanceTol);
+}
+
+std::vector<std::vector<int>> LidarListener::euclideanCluster(const std::vector<std::vector<float>>& points, KdTree* tree, float distanceTol)
+{
+    std::vector<std::vector<int>> clusters;
+    std::vector<int> processed;
+
+    for (int i = 0; i < int(points.size()); ++i)
+        if (std::find(processed.begin(), processed.end(), i) == processed.end())
+        {
+            std::vector<int> cluster;
+            proximity(points, i, cluster, processed, tree, distanceTol);
+            clusters.push_back(cluster);
+        }
+
+    return clusters;
+}
+
+// 3D Eucledian Clustering Implementation
+template<typename PointT> std::vector<typename pcl::PointCloud<PointT>::Ptr> LidarListener::Clustering(typename pcl::PointCloud<PointT>::Ptr obsCloud, float clusterTolerance, int minSize, int maxSize)
+{
+    // Time clustering process
+    auto startTime = std::chrono::steady_clock::now();
+
+    std::vector<typename pcl::PointCloud<PointT>::Ptr> clusters;
+    
+    // Convert PCL point cloud to vector of points for custom KD-tree
+    std::vector<std::vector<float>> points;
+    for (int i = 0; i < int(obsCloud->points.size()); i++)
+    {
+        std::vector<float> point = {obsCloud->points[i].x, obsCloud->points[i].y, obsCloud->points[i].z};
+        points.push_back(point);
+    }
+    
+    // Create custom KD-tree (from your quiz implementation)
+    KdTree* tree = new KdTree;
+    
+    for (int i = 0; i < int(points.size()); i++)
+        tree->insert(points[i], i);
+    
+    // Use your custom euclidean clustering function
+    std::vector<std::vector<int>> cluster_indices = euclideanCluster(points, tree, clusterTolerance);
+    
+
+    // Convert clusters back to PCL format
+    for (std::vector<int> cluster : cluster_indices)
+    {
+        if (int(cluster.size()) >= minSize && int(cluster.size()) <= maxSize)
+        {
+            typename pcl::PointCloud<PointT>::Ptr cloud_cluster(new pcl::PointCloud<PointT>);
+            
+            for (int index : cluster)
+                cloud_cluster->points.push_back(obsCloud->points[index]);
+
+            cloud_cluster->width = cloud_cluster->size();
+            cloud_cluster->height = 1;
+            cloud_cluster->is_dense = true;
+            
+            clusters.push_back(cloud_cluster);
+        }
+    }
+
+    auto endTime = std::chrono::steady_clock::now();
+    auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+    
+    return clusters;
 }
 
 LidarListener::LidarListener() : rclcpp::Node("lidar_pose_estimation")
@@ -211,7 +367,7 @@ void LidarListener::pointCloudCallback(const sensor_msgs::msg::PointCloud2::Shar
     int count = 0;
     for (; iter_x != iter_x.end() && count < 5; ++iter_x, ++iter_y, ++iter_z, ++count)
     {
-        RCLCPP_INFO(this->get_logger(), "Point[%d]: x=%.2f, y=%.2f, z=%.2f", count, *iter_x, *iter_y, *iter_z);
+        RCLCPP_DEBUG(this->get_logger(), "Point[%d]: x=%.2f, y=%.2f, z=%.2f", count, *iter_x, *iter_y, *iter_z);
     }
     
     // Filtering points using Voxel Grid Filtering
@@ -219,41 +375,49 @@ void LidarListener::pointCloudCallback(const sensor_msgs::msg::PointCloud2::Shar
     pcl::fromROSMsg(*msg, *cloud);
     
     // --- Test filtering [TODO: PARAMETERS TO TUNE]---
-    float voxelSize = 0.01f; // 1 cm voxel grid
-    //Eigen::Vector4f minPoint(-10.0, -10.0, -2.0, 1.0); // box min corner
-    //Eigen::Vector4f maxPoint(10.0, 10.0, 3.0, 1.0);    // box max corner
-    
-    auto cloud_filtered = filterPointCloud<pcl::PointXYZ>(cloud, voxelSize);
-    
+    // float voxelSize = 0.01f; // 1 cm voxel grid    
+    // auto cloud_filtered = filterPointCloud<pcl::PointXYZ>(cloud, voxelSize);
+    auto cloud_filtered = cloud;
+
     RCLCPP_INFO(this->get_logger(), "Cloud size before filtering: %zu points", cloud->points.size());
     RCLCPP_INFO(this->get_logger(), "Filtered cloud size: %zu points", cloud_filtered->points.size());
-    
+
     // Print first few points
     for (size_t i = 0; i < std::min<size_t>(5, cloud_filtered->points.size()); ++i)
     {
         const auto& p = cloud_filtered->points[i];
-        RCLCPP_INFO(this->get_logger(), "Filtered Point[%zu]: x=%.2f, y=%.2f, z=%.2f", i, p.x, p.y, p.z);
+        RCLCPP_DEBUG(this->get_logger(), "Filtered Point[%zu]: x=%.2f, y=%.2f, z=%.2f", i, p.x, p.y, p.z);
     }
     // --- End of filtering ---
     // --- Test RANSAC Plane Segmentation [TODO: PARAMETERS TO TUNE] ---
-    int maxIterations = 200; // Number of iterations for RANSAC
-    float distanceThreshold = 0.2f; // Distance threshold for inliers
+    int maxIterations = 500; // Number of iterations for RANSAC
+    float distanceThreshold = 0.02f; // Distance threshold for inliers
     auto [obsCloud, planeCloud] = SegmentPlane<pcl::PointXYZ>(cloud_filtered, maxIterations, distanceThreshold);
-    // Publish the segmented point clouds
-    sensor_msgs::msg::PointCloud2 plane_msg;
-    sensor_msgs::msg::PointCloud2 obstacle_msg;
-    pcl::toROSMsg(*planeCloud, plane_msg);
-    pcl::toROSMsg(*obsCloud, obstacle_msg);
-    plane_msg.header = msg->header;
-    obstacle_msg.header = msg->header;
-    plane_pub_->publish(plane_msg);
-    obstacle_pub_->publish(obstacle_msg);
-
     // Log the size of the segmented clouds
     RCLCPP_INFO(this->get_logger(), "Segmented Plane Cloud size: %zu points", planeCloud->points.size());
     RCLCPP_INFO(this->get_logger(), "Segmented Obstacles Cloud size: %zu points", obsCloud->points.size());
     // --- End of RANSAC Plane Segmentation ---
-    
+    // --- KD-Tree Clustering and Euclidean Clustering ---
+    float clusterTolerance = 0.1f; // Distance tolerance for clustering
+    int minSize = 10; // Minimum size of a cluster
+    int maxSize = 5000; // Maximum size of a cluster
+    auto clusters = Clustering<pcl::PointXYZ>(cloud_filtered, clusterTolerance, minSize, maxSize);
+    RCLCPP_INFO(this->get_logger(), "Number of clusters found: %zu", clusters.size());
+    // Let's take the one with the largest size as the main obstacle
+    auto largestCluster = std::max_element(clusters.begin(), clusters.end(),
+        [](const typename pcl::PointCloud<pcl::PointXYZ>::Ptr& a, const typename pcl::PointCloud<pcl::PointXYZ>::Ptr& b) {
+            return a->points.size() < b->points.size();
+        });
+    // Publish the segmented point clouds
+    sensor_msgs::msg::PointCloud2 plane_msg;
+    sensor_msgs::msg::PointCloud2 obstacle_msg;
+    pcl::toROSMsg(*planeCloud, plane_msg);
+    pcl::toROSMsg(**largestCluster, obstacle_msg);
+    plane_msg.header = msg->header;
+    obstacle_msg.header = msg->header;
+    plane_pub_->publish(plane_msg);
+    obstacle_pub_->publish(obstacle_msg);
+      
 }
 
 
