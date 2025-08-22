@@ -27,8 +27,10 @@
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/kdtree/kdtree.h>
+#include <pcl/search/kdtree.h>
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/segmentation/sac_segmentation.h>
+
 #include "kdtree.h"
 
 struct PolarPoint {
@@ -54,8 +56,10 @@ class LidarListener : public rclcpp::Node
 {
 public:
     LidarListener();
+    ~LidarListener();
 
 private:
+    KdTree* tree_ = nullptr; // KdTree for clustering
     void laserScanCallback(const sensor_msgs::msg::LaserScan::SharedPtr msg);
     void pointCloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
     template<typename PointT> typename pcl::PointCloud<PointT>::Ptr filterPointCloud(
@@ -88,10 +92,18 @@ private:
         KdTree* tree, 
         float distanceTol
     );
-    std::vector<std::vector<int>> euclideanCluster(
-       const std::vector<std::vector<float>>& points,
-       KdTree* tree,
-       float distanceTol
+    void proximity_iterative(
+        const std::vector<std::array<float,3>>& points,
+        int start_idx,
+        std::vector<int>& cluster,
+        std::vector<char>& processed,
+        KdTree* tree,
+        float distanceTol,
+        std::vector<int>& nearby_buffer
+    );
+    std::vector<std::vector<int>> euclideanCluster(const std::vector<std::vector<float>>& points,
+                                                        KdTree* tree,
+                                                        float distanceTol
     );
     template<typename PointT> std::vector<typename pcl::PointCloud<PointT>::Ptr> Clustering(
         typename pcl::PointCloud<PointT>::Ptr obsCloud, 
@@ -99,6 +111,22 @@ private:
         int minSize, 
         int maxSize
     );
+    template<typename PointT> std::vector<typename pcl::PointCloud<PointT>::Ptr> ClusteringPCL(
+        typename pcl::PointCloud<PointT>::Ptr obsCloud, 
+        float clusterTolerance, 
+        int minSize, 
+        int maxSize
+    );
+    template<typename PointT> std::vector<typename pcl::PointCloud<PointT>::Ptr> ClusteringOptimized(typename pcl::PointCloud<PointT>::Ptr obsCloud,
+                                                                                                    float clusterTolerance,
+                                                                                                    int minSize,
+                                                                                                    int maxSize
+    );
+    std::vector<std::vector<int>> euclideanClusterOptimized(const std::vector<std::array<float,3>>& points, 
+                                                            KdTree* tree, 
+                                                            float distanceTol
+    );
+
 
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr laser_sub_;
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pc_sub_;

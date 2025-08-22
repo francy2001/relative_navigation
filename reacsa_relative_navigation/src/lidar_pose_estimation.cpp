@@ -211,10 +211,10 @@ template<typename PointT> std::pair<typename pcl::PointCloud<PointT>::Ptr, typen
     typename pcl::PointCloud<PointT>::Ptr planeCloud(new pcl::PointCloud<PointT>());
     typename pcl::PointCloud<PointT>::Ptr obsCloud(new pcl::PointCloud<PointT>());
 
-    std::ofstream outfile("point_cloud.txt");
-    if (!outfile.is_open()) {
-        RCLCPP_ERROR(this->get_logger(), "Failed to open point_cloud.txt for writing");
-    }
+    // std::ofstream outfile("point_cloud.txt");
+    // if (!outfile.is_open()) {
+    //     RCLCPP_ERROR(this->get_logger(), "Failed to open point_cloud.txt for writing");
+    // }
 
     for (int i = 0; i < int(cloud->points.size()); i++)
     {
@@ -226,14 +226,14 @@ template<typename PointT> std::pair<typename pcl::PointCloud<PointT>::Ptr, typen
             obsCloud->points.push_back(point);
             RCLCPP_DEBUG(this->get_logger(), "Point[%d] is an obstacle: x=%.2f, y=%.2f, z=%.2f", i, point.x, point.y, point.z);
         }
-        outfile << "x=" << point.x << ", y=" << point.y << ", z=" << point.z << "\n";
+        // outfile << "x=" << point.x << ", y=" << point.y << ", z=" << point.z << "\n";
     }
 
-    outfile << "End of point cloud data\n";
-    outfile.close();
+    // outfile << "End of point cloud data\n";
+    // outfile.close();
     
-    RCLCPP_INFO(this->get_logger(), "Segmented Plane Cloud size: %zu points", planeCloud->points.size());
-    RCLCPP_INFO(this->get_logger(), "Segmented Obstacles Cloud size: %zu points", obsCloud->points.size());
+    RCLCPP_DEBUG(this->get_logger(), "Segmented Plane Cloud size: %zu points", planeCloud->points.size());
+    RCLCPP_DEBUG(this->get_logger(), "Segmented Obstacles Cloud size: %zu points", obsCloud->points.size());
 
     auto endTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
@@ -253,6 +253,34 @@ void LidarListener::proximity(const std::vector<std::vector<float>>& points, int
             proximity(points, id, cluster, processed, tree, distanceTol);
 }
 
+void LidarListener::proximity_iterative(const std::vector<std::array<float,3>>& points, int start_idx, std::vector<int>& cluster, std::vector<char>& processed, KdTree* tree,
+                                        float distanceTol, std::vector<int>& nearby_buffer)    // buffer riutilizzabile
+{
+    std::vector<int> stack;
+    stack.reserve(256);
+    stack.push_back(start_idx);
+    processed[start_idx] = 1;
+
+    while (!stack.empty())
+    {
+        int current = stack.back(); stack.pop_back();
+        cluster.push_back(current);
+
+        // cerca vicini (usa il tuo search; qui si assume ritorni vector<int>)
+        nearby_buffer = tree->search({points[current][0], points[current][1], points[current][2]}, distanceTol);
+
+        for (int id : nearby_buffer)
+        {
+            if (!processed[id])
+            {
+                processed[id] = 1;
+                stack.push_back(id);
+            }
+        }
+    }
+}
+
+
 std::vector<std::vector<int>> LidarListener::euclideanCluster(const std::vector<std::vector<float>>& points, KdTree* tree, float distanceTol)
 {
     std::vector<std::vector<int>> clusters;
@@ -269,7 +297,31 @@ std::vector<std::vector<int>> LidarListener::euclideanCluster(const std::vector<
     return clusters;
 }
 
-// 3D Eucledian Clustering Implementation
+std::vector<std::vector<int>> LidarListener::euclideanClusterOptimized(const std::vector<std::array<float,3>>& points, KdTree* tree, float distanceTol)
+{
+    std::vector<std::vector<int>> clusters;
+    size_t n = points.size();
+    clusters.reserve(64);
+
+    std::vector<char> processed(n, 0);         // flag O(1)
+    std::vector<int> nearby_buffer;            // buffer riutilizzato
+    nearby_buffer.reserve(64);
+
+    for (size_t i = 0; i < n; ++i)
+    {
+        if (processed[i]) continue;
+
+        std::vector<int> cluster;
+        cluster.reserve(256);                  // heuristica
+
+        proximity_iterative(points, (int)i, cluster, processed, tree, distanceTol, nearby_buffer);
+        clusters.push_back(std::move(cluster));
+    }
+
+    return clusters;
+}
+
+// 3D Eucledian Clustering Implementation (custom)
 template<typename PointT> std::vector<typename pcl::PointCloud<PointT>::Ptr> LidarListener::Clustering(typename pcl::PointCloud<PointT>::Ptr obsCloud, float clusterTolerance, int minSize, int maxSize)
 {
     // Time clustering process
@@ -315,9 +367,114 @@ template<typename PointT> std::vector<typename pcl::PointCloud<PointT>::Ptr> Lid
 
     auto endTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-    
+    RCLCPP_INFO(this->get_logger(), "Clustering took %ld milliseconds and found %zu clusters", elapsedTime.count(), clusters.size());
     return clusters;
 }
+
+template<typename PointT> std::vector<typename pcl::PointCloud<PointT>::Ptr> LidarListener::ClusteringPCL(typename pcl::PointCloud<PointT>::Ptr obsCloud, float clusterTolerance, int minSize, int maxSize)
+{
+    auto startTime = std::chrono::steady_clock::now();
+
+    std::vector<typename pcl::PointCloud<PointT>::Ptr> clusters;
+    if (obsCloud->empty()) {
+        RCLCPP_DEBUG(this->get_logger(), "Obs cloud empty");
+        return clusters;
+    }
+
+    // Use PCL KdTree (bulk build)
+    typename pcl::search::KdTree<PointT>::Ptr tree(new pcl::search::KdTree<PointT>());
+    tree->setInputCloud(obsCloud);
+
+    std::vector<pcl::PointIndices> cluster_indices;
+    pcl::EuclideanClusterExtraction<PointT> ec;
+    ec.setClusterTolerance(clusterTolerance);
+    ec.setMinClusterSize(minSize);
+    ec.setMaxClusterSize(maxSize);
+    ec.setSearchMethod(tree);
+    ec.setInputCloud(obsCloud);
+    ec.extract(cluster_indices);
+
+    // Convert indices to pointclouds
+    for (const auto& indices : cluster_indices) {
+        typename pcl::PointCloud<PointT>::Ptr cloud_cluster(new pcl::PointCloud<PointT>);
+        cloud_cluster->points.reserve(indices.indices.size());
+        for (int idx : indices.indices)
+            cloud_cluster->points.push_back(obsCloud->points[idx]);
+        cloud_cluster->width = static_cast<uint32_t>(cloud_cluster->points.size());
+        cloud_cluster->height = 1;
+        cloud_cluster->is_dense = true;
+        clusters.push_back(cloud_cluster);
+    }
+
+    auto endTime = std::chrono::steady_clock::now();
+    auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+    RCLCPP_INFO(this->get_logger(), "Clustering took %ld ms and found %zu clusters",
+                elapsedTime.count(), clusters.size());
+    return clusters;
+}
+
+template<typename PointT> std::vector<typename pcl::PointCloud<PointT>::Ptr> LidarListener::ClusteringOptimized(typename pcl::PointCloud<PointT>::Ptr obsCloud,
+                                                                                                                float clusterTolerance,
+                                                                                                                int minSize,
+                                                                                                                int maxSize)
+{
+    auto startTime = std::chrono::steady_clock::now();
+    std::vector<typename pcl::PointCloud<PointT>::Ptr> clusters = {};
+    if (obsCloud->empty()) return clusters;
+
+    // --- Converti nel formato compatto (std::array) ---
+    std::vector<std::array<float,3>> points;
+    points.reserve(obsCloud->points.size());
+    for (const auto &p : obsCloud->points)
+        points.push_back({p.x, p.y, p.z});
+
+    // --- (Opzionale) Riusa la KD-tree come membro della classe per evitare ricostruzioni ---
+    if (!this->tree_) {
+        this->tree_ = new KdTree();
+    } else {
+        // Se la tua KdTree ha metodo clear/reset, chiamalo: tree_->clear();
+        // altrimenti ricreane una nuova per sicurezza:
+        delete this->tree_;
+        this->tree_ = nullptr;
+        // (preferibile implementare clear() nella tua KD-tree)
+    }
+    this->tree_ = new KdTree();
+
+    // Inserisci i punti nella KD-tree (bulk-insert se disponibile sarebbe meglio)
+    for (size_t i = 0; i < points.size(); ++i)
+        this->tree_->insert({points[i][0], points[i][1], points[i][2]}, (int)i);
+
+    RCLCPP_INFO(this->get_logger(), "Built tree with %zu points", points.size());
+    // --- Clustering ottimizzato (iterativo) ---
+    auto idx_clusters = euclideanClusterOptimized(points, this->tree_, clusterTolerance);
+
+    // --- Converti indici in pcl::PointCloud ---
+    for (const auto &idxs : idx_clusters)
+    {
+        if ((int)idxs.size() < minSize || (int)idxs.size() > maxSize) continue;
+        typename pcl::PointCloud<PointT>::Ptr cloud_cluster(new pcl::PointCloud<PointT>);
+        cloud_cluster->points.reserve(idxs.size());
+        for (int idx : idxs)
+            cloud_cluster->points.push_back(obsCloud->points[idx]);
+        cloud_cluster->width = static_cast<uint32_t>(cloud_cluster->points.size());
+        cloud_cluster->height = 1;
+        cloud_cluster->is_dense = true;
+        clusters.push_back(cloud_cluster);
+    }
+
+    auto endTime = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+    RCLCPP_INFO(this->get_logger(), "Clustering took %ld ms and found %zu clusters", elapsed.count(), clusters.size());
+    return clusters;
+}
+
+LidarListener::~LidarListener() {
+    if (tree_) {
+        delete tree_;
+        tree_ = nullptr;
+    }
+}
+
 
 LidarListener::LidarListener() : rclcpp::Node("lidar_pose_estimation")
 {
@@ -360,6 +517,9 @@ void LidarListener::pointCloudCallback(const sensor_msgs::msg::PointCloud2::Shar
 {
     RCLCPP_INFO(this->get_logger(), "PointCloud2 received: width=%u, height=%u, point_step=%u",
     msg->width, msg->height, msg->point_step);
+
+    sensor_msgs::msg::PointCloud2 obstacle_msg;
+    sensor_msgs::msg::PointCloud2 plane_msg;
     
     sensor_msgs::PointCloud2ConstIterator<float> iter_x(*msg, "x");
     sensor_msgs::PointCloud2ConstIterator<float> iter_y(*msg, "y");
@@ -375,10 +535,9 @@ void LidarListener::pointCloudCallback(const sensor_msgs::msg::PointCloud2::Shar
     pcl::fromROSMsg(*msg, *cloud);
     
     // --- Test filtering [TODO: PARAMETERS TO TUNE]---
-    // float voxelSize = 0.01f; // 1 cm voxel grid    
-    // auto cloud_filtered = filterPointCloud<pcl::PointXYZ>(cloud, voxelSize);
-    auto cloud_filtered = cloud;
-
+    float voxelSize = 0.01f; // 1 cm voxel grid    
+    auto cloud_filtered = filterPointCloud<pcl::PointXYZ>(cloud, voxelSize);
+    
     RCLCPP_INFO(this->get_logger(), "Cloud size before filtering: %zu points", cloud->points.size());
     RCLCPP_INFO(this->get_logger(), "Filtered cloud size: %zu points", cloud_filtered->points.size());
 
@@ -393,33 +552,44 @@ void LidarListener::pointCloudCallback(const sensor_msgs::msg::PointCloud2::Shar
     int maxIterations = 500; // Number of iterations for RANSAC
     float distanceThreshold = 0.02f; // Distance threshold for inliers
     auto [obsCloud, planeCloud] = SegmentPlane<pcl::PointXYZ>(cloud_filtered, maxIterations, distanceThreshold);
+    pcl::toROSMsg(*planeCloud, plane_msg);
+    plane_msg.header = msg->header;
+    plane_pub_->publish(plane_msg);
     // Log the size of the segmented clouds
     RCLCPP_INFO(this->get_logger(), "Segmented Plane Cloud size: %zu points", planeCloud->points.size());
     RCLCPP_INFO(this->get_logger(), "Segmented Obstacles Cloud size: %zu points", obsCloud->points.size());
     // --- End of RANSAC Plane Segmentation ---
     // --- KD-Tree Clustering and Euclidean Clustering ---
-    float clusterTolerance = 0.1f; // Distance tolerance for clustering
+    float clusterTolerance = 0.5f; // Distance tolerance for clustering
     int minSize = 10; // Minimum size of a cluster
     int maxSize = 5000; // Maximum size of a cluster
-    auto clusters = Clustering<pcl::PointXYZ>(cloud_filtered, clusterTolerance, minSize, maxSize);
+    auto clusters = ClusteringOptimized<pcl::PointXYZ>(obsCloud, clusterTolerance, minSize, maxSize);
+    auto largestCluster = typename pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
     RCLCPP_INFO(this->get_logger(), "Number of clusters found: %zu", clusters.size());
     // Let's take the one with the largest size as the main obstacle
-    auto largestCluster = std::max_element(clusters.begin(), clusters.end(),
+    if(clusters.empty()){
+        obstacle_msg.header = msg->header;
+        obstacle_msg.height = 1;
+        obstacle_msg.width = 0;
+        obstacle_msg.is_bigendian = false;
+        obstacle_msg.is_dense = true;
+        obstacle_msg.point_step = 0;
+        obstacle_msg.row_step = 0;
+        obstacle_msg.fields.clear();
+        obstacle_msg.data.clear();
+        obstacle_pub_->publish(obstacle_msg);
+    }else{
+        auto pointer = std::max_element(clusters.begin(), clusters.end(),
         [](const typename pcl::PointCloud<pcl::PointXYZ>::Ptr& a, const typename pcl::PointCloud<pcl::PointXYZ>::Ptr& b) {
             return a->points.size() < b->points.size();
         });
-    // Publish the segmented point clouds
-    sensor_msgs::msg::PointCloud2 plane_msg;
-    sensor_msgs::msg::PointCloud2 obstacle_msg;
-    pcl::toROSMsg(*planeCloud, plane_msg);
-    pcl::toROSMsg(**largestCluster, obstacle_msg);
-    plane_msg.header = msg->header;
-    obstacle_msg.header = msg->header;
-    plane_pub_->publish(plane_msg);
-    obstacle_pub_->publish(obstacle_msg);
+        largestCluster = *pointer;
+        pcl::toROSMsg(*largestCluster, obstacle_msg);
+        obstacle_msg.header = msg->header;
+        obstacle_pub_->publish(obstacle_msg);
+    }
       
 }
-
 
 
 int main(int argc, char const* argv[])
