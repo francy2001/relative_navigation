@@ -1,0 +1,105 @@
+\chapter{Gazebo Simulation Environment for REACSA Relative Navigation}
+
+In this chapter, the setup of the REACSA's sensors within the Gazebo simulation environment is presented. 
+\\
+The robot is divided into three main modules (see the previous section), and two primary sensors are simulated: a LiDAR and a camera. 
+The LiDAR is positioned at a lower level to detect low-lying elements in the environment, while the camera is mounted near the top to provide an overall visual perspective.
+\\
+For the simulation, the sensor parameters are currently chosen as placeholders for testing purposes. Once the actual hardware is selected, these values should be updated accordingly.
+
+\section{LiDAR Sensor}
+
+The LiDAR is defined as a macro link in the \texttt{xacro} format:
+
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+<xacro:macro name="lidar_link" params="name">
+  <link name="${name}">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="0.000166667" iyy="0.000166667" izz="0.000166667"/>
+    </inertial>
+    <collision>
+      <geometry><box size="0.1 0.1 0.1"/></geometry>
+    </collision>
+    <visual>
+      <geometry><box size="0.1 0.1 0.1"/></geometry>
+    </visual>
+  </link>
+</xacro:macro>
+\end{lstlisting}
+
+\noindent The LiDAR sensor is then inserted in Gazebo with basic parameters:
+
+\begin{itemize}
+    \item Sensor type: GPU LiDAR
+    \item Update rate: 10 Hz
+    \item Horizontal scan: 1800 samples over 360°
+    \item Vertical scan: 16 samples over ±15°
+    \item Range: 0.9 to 100 m (currently reduced for simplicity)
+    \item Resolution: 3 cm
+\end{itemize}
+
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+<gazebo reference="reacsa_lidar_link">
+  <sensor name="lidar_sensor" type="gpu_lidar">
+    <topic>lidar</topic>
+    <update_rate>10</update_rate>
+    <frame>reacsa_lidar_link</frame>
+    <lidar>
+      <scan>
+        <horizontal><samples>1800</samples><min_angle>-3.141593</min_angle><max_angle>3.141593</max_angle></horizontal>
+        <vertical><samples>16</samples><min_angle>-0.261799</min_angle><max_angle>0.261799</max_angle></vertical>
+      </scan>
+      <range><min>0.9</min><max>100</max><resolution>0.03</resolution></range>
+    </lidar>
+    <alwaysOn>1</alwaysOn>
+    <visualize>true</visualize>
+  </sensor>
+</gazebo>
+\end{lstlisting}
+
+\section{Camera Sensor}
+
+The camera is similarly defined as a macro link:
+
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+<xacro:macro name="camera_link" params="name">
+  <link name="${name}">
+    <inertial><mass value="0.1"/><origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="0.000166667" iyy="0.000166667" izz="0.000166667"/>
+    </inertial>
+    <visual><geometry><box size="0.1 0.1 0.1"/></geometry><material name="red"/></visual>
+    <collision><geometry><box size="0.1 0.1 0.1"/></geometry></collision>
+  </link>
+</xacro:macro>
+\end{lstlisting}
+
+\noindent In Gazebo, the camera sensor is configured with the following properties:
+
+\begin{itemize}
+    \item Sensor type: Camera
+    \item Horizontal field of view: 1.047 rad
+    \item Image resolution: 320x240 pixels
+    \item Clipping range: 0.1–100 m
+    \item Update rate: 30 Hz
+    \item Visualization enabled
+\end{itemize}
+
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+<gazebo reference="camera_link">
+  <sensor name="camera_link" type="camera">
+    <camera>
+      <horizontal_fov>1.047</horizontal_fov>
+      <image><width>320</width><height>240</height></image>
+      <clip><near>0.1</near><far>100</far></clip>
+    </camera>
+    <always_on>1</always_on>
+    <update_rate>30</update_rate>
+    <visualize>true</visualize>
+    <topic>camera</topic>
+  </sensor>
+</gazebo>
+\end{lstlisting}
+
+\noindent This setup allows for initial testing of REACSA's perception capabilities in Gazebo, with modular sensor definitions that can be easily replaced once the final hardware is selected.

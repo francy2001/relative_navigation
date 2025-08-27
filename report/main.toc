@@ -1,0 +1,29 @@
+\babel@toc {english}{}\relax 
+\contentsline {chapter}{Introduction}{8}{chapter*.4}%
+\contentsline {chapter}{\numberline {1}REACSA control architecture: Mixed Integer MPC with binary and continuous actuation }{10}{chapter.1}%
+\contentsline {chapter}{\numberline {2}REACSA Architecture}{12}{chapter.2}%
+\contentsline {chapter}{\numberline {3}Gazebo Simulation Environment for REACSA Relative Navigation}{14}{chapter.3}%
+\contentsline {section}{\numberline {3.1}LiDAR Sensor}{14}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Camera Sensor}{15}{section.3.2}%
+\contentsline {chapter}{\numberline {4}Object Detection with Intel RealSense D455 Using ArUco Markers}{17}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Intel RealSense Depth Camera D455}{17}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Object Detection}{18}{section.4.2}%
+\contentsline {subsection}{\numberline {4.2.1}Creation of ArUco Markers}{18}{subsection.4.2.1}%
+\contentsline {subsection}{\numberline {4.2.2}Camera Calibration}{18}{subsection.4.2.2}%
+\contentsline {subsection}{\numberline {4.2.3}ArUco Marker Detection and Pose Estimation}{18}{subsection.4.2.3}%
+\contentsline {chapter}{\numberline {5}Pose Estimation with 3D Velodyne LiDAR}{21}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Velodyne VLP-16 LiDAR Sensor}{21}{section.5.1}%
+\contentsline {subsection}{\numberline {5.1.1}Specifications}{22}{subsection.5.1.1}%
+\contentsline {section}{\numberline {5.2}Pose Estimation Algorithm with 3D LiDAR}{22}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}Overview}{22}{subsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2.2}Implementation choices and constraints}{23}{subsection.5.2.2}%
+\contentsline {subsection}{\numberline {5.2.3}ROS2 Node creation}{23}{subsection.5.2.3}%
+\contentsline {subsection}{\numberline {5.2.4}Preprocessing and downsampling}{24}{subsection.5.2.4}%
+\contentsline {subsection}{\numberline {5.2.5}Ground-plane segmentation using RANSAC}{25}{subsection.5.2.5}%
+\contentsline {subsection}{\numberline {5.2.6}Coordinate transformation}{26}{subsection.5.2.6}%
+\contentsline {subsection}{\numberline {5.2.7}Spatial indexing: KD-tree}{26}{subsection.5.2.7}%
+\contentsline {subsection}{\numberline {5.2.8}Euclidean clustering}{28}{subsection.5.2.8}%
+\contentsline {subsection}{\numberline {5.2.9}Geometric bounding and state estimation}{29}{subsection.5.2.9}%
+\contentsline {subsection}{\numberline {5.2.10}Results}{29}{subsection.5.2.10}%
+\contentsline {chapter}{Conclusions}{32}{chapter*.7}%
+\contentsline {chapter}{Bibliography}{33}{chapter*.8}%

@@ -20,6 +20,7 @@ find_package(pcl_conversions REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 # Add include directories
 include_directories(include/reacsa_relative_navigation)
@@ -37,6 +38,7 @@ ament_target_dependencies(lidar_pose_estimation
     tf2_ros
     tf2_sensor_msgs
     geometry_msgs
+    visualization_msgs
 )
 
 install(TARGETS lidar_pose_estimation DESTINATION lib/${PROJECT_NAME})

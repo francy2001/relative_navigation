@@ -1,5 +1,30 @@
-/* \author Aaron Brown */
-// Quiz on implementing kd tree
+/*
+* A K-Dimensional Tree is a binary search tree where data in each node is a K-Dimensional point in space. 
+* In short, it is a space partitioning data structure for organizing points in a K-Dimensional space. 
+* A non-leaf node in K-D tree divides the space into two parts, called as half-spaces. Points to the left of this space 
+* are represented by the left subtree of that node and points to the right of the space are represented by the right subtree. 
+* Let's understand a 2-D Tree: the root would have an x-aligned plane, the root's children would both have y-aligned planes, 
+* the root's grandchildren would all have x-aligned planes, and the root's great-grandchildren would all have y-aligned planes and so on.
+*
+* Generalization: 
+* Let us number the planes as 0, 1, 2, …(K – 1). From the above example, it is quite clear that a point (node) at depth D will have 
+* A aligned plane where A is calculated as: A = D mod K
+* How to determine if a point will lie in the left subtree or in right subtree? 
+* If the root node is aligned in planeA, then the left subtree will contain all points whose coordinates in that plane are smaller than that of root node. 
+* Similarly, the right subtree will contain all points whose coordinates in that plane are greater-equal to that of root node. 
+*
+* The KD-Tree enables efficient nearest neighbor search with a time complexity of O(log(n)) as opposed to O(n). 
+* This is primarily because, by grouping the points into regions in a KD-Tree, the search space is narrowed down drastically 
+* and expensive distance computations for potentially thousands of points can be avoided. 
+*
+* Once points are able to be inserted into the tree, the next step is being able to search for nearby points inside the tree compared to a given target point. 
+* Points within a distance tolerance are considered to be nearby.
+* With the KD-Tree, a boxed square of size 2 X distance tolerance, centered around the target point is used. 
+* If the current node point is within this box, only then the Euclidean distance is calculated and depending on this, 
+* it can be determined if the point should be added to the list of nearby points. Further, if this box does not cross over the node division region, 
+* the branch on the other side of the region is completely skipped. If it crosses over, then that side is recursively explored. 
+*
+*/
 
 #ifndef KDTREE_H
 #define KDTREE_H

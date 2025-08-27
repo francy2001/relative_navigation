@@ -1,0 +1,67 @@
+
+\documentclass[a4paper,11pt,oneside]{book}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb,amsmath,color}
+\usepackage{cite}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{hyperref}
+
+
+\usepackage[a4paper,
+            left=2.0cm,
+            right=2.0cm,
+            top=2.5cm,
+            bottom=2.5cm]{geometry}
+
+
+\begin{document}
+\pagestyle{myheadings}
+
+\include{frontespizio}
+
+\include{abstract}
+\newpage\null\thispagestyle{empty}\newpage
+
+\tableofcontents{}
+\newpage\null\thispagestyle{empty}\newpage
+
+\listoffigures                          %crea l'elenco delle figure
+%\vspace*{2cm}
+
+\include{introduction}
+\newpage\null\thispagestyle{empty}\newpage
+
+
+%%%%%%%%%% Chapter Title %%%%%%%%%%
+\include{chapter_1}
+\newpage\null\thispagestyle{empty}\newpage
+
+\include{chapter_2}
+\newpage\null\thispagestyle{empty}\newpage
+
+\include{chapter_3}
+\newpage\null\thispagestyle{empty}\newpage
+
+\include{chapter_4}
+\newpage\null\thispagestyle{empty}\newpage
+
+\include{chapter_5}
+\newpage\null\thispagestyle{empty}\newpage
+
+
+\include{conclusions}
+
+%%%%%%%%%% Bibliography %%%%%%%%%%%
+\bibliography{bibfile}{}
+\bibliographystyle{plain}
+\addcontentsline{toc}{chapter}{Bibliography}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}
